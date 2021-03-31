@@ -14,6 +14,7 @@ jobs:
   Setup-ChefWorkstation:
     runs-on: self-hosted
     steps:
+      - uses: actions/checkout@v2
       - name: Checking if installation required
         continue-on-error: true
         id: check
@@ -29,7 +30,6 @@ jobs:
     runs-on: self-hosted
     needs: Setup-ChefWorkstation
     steps:
-      - uses: actions/checkout@v2
       - name: Create/push Policyfile.lock
         run: |
           chef update policyfiles/db-server.rb -c /home/r-goto/.chef/config.rb
@@ -38,6 +38,8 @@ jobs:
           chef push production policyfiles/web-server.rb -c /home/r-goto/.chef/config.rb
   
   Converge-Nodes:
+    environment:
+      name: production
     runs-on: self-hosted
     needs: Push-Policyfiles-to-ChefServer
     steps:
