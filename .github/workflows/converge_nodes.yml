@@ -30,7 +30,7 @@ jobs:
     runs-on: self-hosted
     needs: Setup-ChefWorkstation
     steps:
-      - name: Create/push Policyfile.lock
+      - name: Create/push Policyfile.lock to ChefServer
         run: |
           chef update policyfiles/db-server.rb -c /home/r-goto/.chef/config.rb
           chef update policyfiles/web-server.rb -c /home/r-goto/.chef/config.rb
@@ -44,7 +44,7 @@ jobs:
     runs-on: self-hosted
     needs: Push-Policyfiles-to-ChefServer
     steps:
-      - name: Create/push Policyfile.lock
+      - name: Converge all production nodes
         run: 
           knife ssh 'policy_group:production' 'sudo chef-client' -c /home/r-goto/.chef/config.rb
   Test:
