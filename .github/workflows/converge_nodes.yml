@@ -40,6 +40,7 @@ jobs:
   Converge-Nodes:
     environment:
       name: production
+      url: https://github.com/first-org-chef-repo/production-policyfiles/tree/main/policyfiles
     runs-on: self-hosted
     needs: Push-Policyfiles-to-ChefServer
     steps:
