@@ -19,7 +19,7 @@ override['chef_client']['splay'] = 3600 # 1H
 
 # Specify Policy name & Policy group
 override['bootstrap_a_node']['policy_name'] = 'web-server'
-override['bootstrap_a_node']['policy_group'] = 'staging'
+override['bootstrap_a_node']['policy_group'] = 'production'
 
 # Specify chef-client version
 override['bootstrap_a_node']['chef_client']['version'] = '16.10'
