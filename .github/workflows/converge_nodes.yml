@@ -1,6 +1,6 @@
 # This is a basic workflow to help you get started with Actions
 
-name: Converge All Nodes
+name: Converge All Nodes 
 
 on:
   push:
@@ -14,23 +14,25 @@ jobs:
   Setup-ChefWorkstation:
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v2
-      - name: Checking if installation required
+      - name: Chef Installed?
         continue-on-error: true
-        id: check
-        run: sudo dpkg -l | grep chef
+        id: check-chef
+        run: chef -v
+        
       - name: Installing ChefWorkstation v21.2.278
-        if: steps.check.outcome == 'failure'
+        if: steps.check-chef.outcome == 'failure'
         run: |
-          wget -q https://packages.chef.io/files/stable/chef-workstation/21.2.278/ubuntu/20.04/chef-workstation_21.2.278-1_amd64.deb
-          sudo dpkg -i chef-workstation_21.2.278-1_amd64.deb
+          wget https://packages.chef.io/files/stable/chef-workstation/21.2.278/el/8/chef-workstation-21.2.278-1.el7.x86_64.rpm
+          sudo rpm -ivh chef-workstation-21.2.278-1.el7.x86_64.rpm
+          rm chef-workstation-21.2.278-1.el7.x86_64.rpm
           chef -v
 
-  Push-Policyfiles-to-ChefServer:
+  Push-Policyfile:
     runs-on: self-hosted
     needs: Setup-ChefWorkstation
     steps:
-      - name: Create/push Policyfile.lock to ChefServer
+      - uses: actions/checkout@v2
+      - name: Pushing Policyfile to ChefServer
         run: |
           chef update policyfiles/db-server.rb -c .chef/config.rb
           chef update policyfiles/web-server.rb -c .chef/config.rb
@@ -38,21 +40,30 @@ jobs:
           chef push production policyfiles/web-server.rb -c .chef/config.rb
   
   Converge-Nodes:
+    runs-on: self-hosted
+    needs: Push-Policyfile
     environment:
       name: production
-      url: https://github.com/first-org-chef-repo/production-policyfiles/tree/main/policyfiles
-    runs-on: self-hosted
-    needs: Push-Policyfiles-to-ChefServer
     steps:
-      - name: Converge all production nodes
+      - name: Converging all production nodes...
         run: 
           knife ssh 'policy_group:production' 'sudo chef-client' -c .chef/config.rb
-  Test:
+          
+  Inspec-Test:
     runs-on: self-hosted
     needs: Converge-Nodes
     steps:
-      - name: Run Inspec
+      - name: Running Inspec (WEB servers)
         continue-on-error: true
-        run: |
-          for i in `knife search 'policy_group:production AND policy_name:web-server' -i -c .chef/config.rb | sort`; do inspec exec $GITHUB_WORKSPACE/test/setup_nginx_test.rb --target ssh://r-goto@$i -i ~/.ssh/nodes_shared || echo 'Inspec failure!'; done
-          for i in `knife search 'policy_group:production AND policy_name:db-server' -i -c .chef/config.rb | sort`; do inspec exec $GITHUB_WORKSPACE/test/setup_postgresql_test.rb --target ssh://r-goto@$i -i ~/.ssh/nodes_shared || echo 'Inspec failure!'; done
+        id: inspec-check-1
+        run: for i in `knife search 'policy_group:production AND policy_name:web-server' -i -c .chef/config.rb | sort`; do inspec exec test/setup_nginx_test.rb --target ssh://r-goto@$i -i ~/.ssh/nodes_shared; done
+
+      - name: Running Inspec (DB servers)
+        continue-on-error: true
+        if: steps.inspec-check-1.outcome == 'success'
+        id: inspec-check-last
+        run: for i in `knife search 'policy_group:production AND policy_name:db-server' -i -c .chef/config.rb | sort`; do inspec exec test/setup_postgresql_test.rb --target ssh://r-goto@$i -i ~/.ssh/nodes_shared; done
+          
+      - name: Incase of Inspec Failure...
+        if: steps.inspec-check-last.outcome != 'success'
+        run: echo "!!!ATENTION!!! Some sort of notifications must be sent. Insec Test Failling!!!!"

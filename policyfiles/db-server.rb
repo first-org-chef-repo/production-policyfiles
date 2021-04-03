@@ -4,19 +4,18 @@
 # https://docs.chef.io/policyfile/
 
 name 'db-server'
-run_list 'bootstrap_a_node::default', 'postgresql_setup::default'
 default_source :chef_server, 'https://automate.cl/organizations/first-org'
-default_source :supermarket
-cookbook 'bootstrap_a_node', '~> 2'
-cookbook 'postgresql_setup', '0.1.0'
+run_list 'bootstrap_a_node::default', 'postgresql_setup::default'
+cookbook 'bootstrap_a_node', '3.0.0'
+cookbook 'postgresql_setup', '1.0.0'
 
 ##########
 # Attributes
 ##########
 
 # Specify CCR interval and splay
-override['chef_client']['interval'] = 43200 # 12H
-override['chef_client']['splay'] = 21600 # 6H
+override['chef_client']['interval'] = 86400 # 24H
+override['chef_client']['splay'] = 3600 # 1H
 
 # Specify Policy name & Policy group
 override['bootstrap_a_node']['policy_name'] = 'db-server'
@@ -27,6 +26,5 @@ override['bootstrap_a_node']['chef_client']['version'] = '16.10'
 
 # Disable Slack Notification that's set only for the initial CCR
 override['chef_client']['handler']['slack']['enabled'] = false
-
 # Specify node Time Zone
 override['bootstrap_a_node']['timezone'] = 'Asia/Tokyo'
