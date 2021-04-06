@@ -40,8 +40,8 @@ jobs:
   Converge-Nodes:
     runs-on: self-hosted
     needs: Push-Policyfile
-    environment:
-      name: production
+    # environment:
+    #   name: production
     steps:
       - name: Converging all production nodes...
         run: 
